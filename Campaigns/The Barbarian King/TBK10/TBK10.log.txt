@@ -1,0 +1,6 @@
+2021/06/24 17:11:54.446   GroupLength: 6
+2021/06/24 17:11:54.453   HouseLength: 12
+2021/06/24 17:11:54.459   UnitLength: 17
+2021/06/24 17:11:54.464   RoadworksLength: 119
+2021/06/24 17:11:54.471   TileObjectLength: 22
+2021/06/24 17:11:54.475   aDestroyedHouseData: 0

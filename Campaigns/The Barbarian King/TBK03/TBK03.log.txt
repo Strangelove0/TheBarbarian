@@ -1,0 +1,4 @@
+2021/06/24 17:10:57.720   TileObjectLength: 61
+2021/06/24 17:10:57.724   RoadworksLength: 235
+2021/06/24 17:10:57.729   HouseLength: 19
+2021/06/24 17:10:57.734   aDestroyedHouseData: 0
