@@ -171,7 +171,7 @@ begin
 				if Wares <> 0 then
 				begin
 					Actions.HouseTakeWaresFrom(aHouses[h], t, Wares); //Delete Wares
-					Actions.HouseAddWaresTo(aHouses[h], t, Round(Wares *Modifier) +Offset); //Add updated Amount
+					Actions.HouseAddWaresTo(aHouses[h], t, Utils.RoundTo((Wares *Modifier), 5) +Offset); //Add updated Amount (Round up or down to a multiple of 5 for looks)
 				end;
 			end;
 end;
