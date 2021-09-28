@@ -61,6 +61,17 @@ begin
 end;
 
 
+function GetGroupType(UnitType: Byte): Byte; //Return GroupType of Army Units
+begin
+	case UnitType of
+		14,15,16,23,26: Result := 0; //Melee
+		19,20,25:		Result := 1; //Antihorse
+		17,18,24:		Result := 2; //Ranged
+		21,22,27:		Result := 3; //Mounted
+	end;
+end;
+
+
 procedure SaveWeaponProduction(p: Byte);
 var
 	aHouses: array of Integer;
@@ -243,19 +254,12 @@ end;
 
 procedure AddDefencePositionAndGroup(Player, UnitType, X, Y, D, Radius: Byte); //Causes Problems if AI already has Attack defence positions with same GroupType (Added Groups will  be asigned to previously existing positions)
 var
-	GroupType: Byte;
 	Count, Columns, GroupID: Integer;
 begin
-	case UnitType of
-		14,15,16,23,26: GroupType := 0; //Melee
-		19,20,25:		GroupType := 1; //Antihorse
-		17,18,24:		GroupType := 2; //Ranged
-		21,22,27:		GroupType := 3; //Mounted
-	end;
-	Actions.AIDefencePositionAdd(Player, X, Y, D, GroupType, Radius, 0);
-	States.AIGroupsFormationGet(Player, GroupType, Count, Columns);
+	Actions.AIDefencePositionAdd(Player, X, Y, D, GetGroupType(UnitType), Radius, 0);
+	States.AIGroupsFormationGet(Player, GetGroupType(UnitType), Count, Columns);
 	GroupID := Actions.GiveGroup(Player, UnitType, X, Y, D, Count, Columns);
-	Actions.GroupHungerSet(GroupID, States.UnitMaxHunger);
+	Actions.GroupHungerSet(GroupID, States.UnitMaxHunger()/2 +States.KaMRandomI(States.UnitMaxHunger()/2 +1));
 end;
 
 
