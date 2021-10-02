@@ -1,6 +1,6 @@
 //-- Improve Static AI --//
 //By Strangelove
-//v0.4.1b
+//v0.4.2
 //02.10.2021
 //Developed for r8754
 //Last modified on r12945
@@ -13,7 +13,7 @@
 {$EVENT evtHouseDestroyed:ImproveStaticAIOnHouseDestroyed}
 {$EVENT evtTick:ImproveStaticAIOnTick}
 {$EVENT evtPlayerDefeated:ImproveStaticAIOnPlayerDefeated}
-
+{$EVENT evtHouseBuilt:ImproveStaticAIOnHouseBuilt}
 
 {$DEFINE DEBUG}
 {$UNDEF DEBUG}
@@ -30,7 +30,7 @@
 const
 	DELAY = 300; 		//Cant be 0; Destroyed House needs time to be removed from game (in Ticks)
 	UPDATE_FREQ = 101; 	//How frequently aDestroyedHouses array will be checked (in Ticks)
-	RADIUS = 2;			//Acceptable Radius for newly placed houseplans (performance intensive; recommended values: 1..3);
+	RADIUS = 2;			//Acceptable Radius for newly placed houseplans (performance intensive; recommended values: 1..3)
 
 	
 Type
@@ -166,13 +166,82 @@ end;
 {$IFDEF AIDEF}
 procedure BlockWareInStorehouse(Player, WareType: Byte; Block: Boolean); //Block specific Ware in all Storehouses target Player controls
 var
-	h: Integer;
 	aHouses: array of Integer;
+	h: Integer;
 begin
 	aHouses := States.PlayerGetAllHouses(Player);
 	for h := 0 to Length(aHouses) -1 do
 		if States.HouseType(aHouses[h]) = 11 then
 			Actions.HouseWareBlock(aHouses[h], WareType, Block);
+end;
+
+
+procedure ExecuteWareBlock(Player: Byte);
+var
+	aHouses: array of Integer;
+	h: Integer;
+begin
+	aHouses := States.PlayerGetAllHouses(Player);
+	for h := 0 to Length(aHouses) -1 do
+		case States.HouseType(aHouses[h]) of
+			0: 	BlockWareInStorehouse(Player, 0, true); //Sawmill: Treetrunk
+			1:	begin //Iron Smithy
+					BlockWareInStorehouse(Player, 3, true); //Iron Ore
+					BlockWareInStorehouse(Player, 5, true); //Coal
+				end;
+			2:  begin //Weapon Smithy
+					BlockWareInStorehouse(Player, 5, true); //Coal
+					BlockWareInStorehouse(Player, 6, true); //Iron
+				end;
+			3: 	; //Coal Mine
+			4:	; //Iron Mine
+			5: 	; //Coal Mine
+			6:	; //Fisherhut
+			7: 	BlockWareInStorehouse(Player, 11, true); //Bakery: Flour
+			8:	; //Farm
+			9:	; //Woodcutter
+			10:	begin //Weapon Smithy
+					BlockWareInStorehouse(Player, 5, true); //Coal
+					BlockWareInStorehouse(Player, 6, true); //Iron
+				end;
+			11: ; //Storehouses
+			12: BlockWareInStorehouse(Player, 9, true); //Stables: Corn
+			13: ; //Schools
+			14: ; //Quarry
+			15: begin //Metallurgists
+					BlockWareInStorehouse(Player, 4, true); //Gold Ore
+					BlockWareInStorehouse(Player, 5, true); //Coal
+				end;
+			16: BlockWareInStorehouse(Player, 9, true); //Swinefarm: Corn
+			17: ; //Watchtower
+			18: ; //Townhall
+			19: ; //BlockWareInStorehouse(Player, 2, true); //Weapons Workshop: Timber
+			20: begin
+					BlockWareInStorehouse(Player, 12, true); //Armory Workshop
+					//BlockWareInStorehouse(Player, 2, true); //Timber
+				end;
+			21: ; //Barracks
+			22: BlockWareInStorehouse(Player, 9, true); //Mill: Corn
+			23: ; //Vehicles Workshop
+			24: BlockWareInStorehouse(Player, 14, true); //Butcher: Pig
+			25: BlockWareInStorehouse(Player, 15, true); //Tannery: Skin
+			26: ; //Unused
+			27: ; //Inn
+			28: ; //Vineyard
+			29: ; //MarketFromWare
+		end;
+end;
+
+
+//Blocks Wares in AI Storehouses depending on its structures
+procedure AISetupWareBlock();
+var
+	p: Byte;
+begin
+	for p := 0 to States.StatPlayerCount() -1 do
+		if States.PlayerIsAI(p) then
+			if not States.AIAutoBuild(p) then //Igrone if AI has AutoBuild enabled
+				ExecuteWareBlock(p);
 end;
 
 
@@ -203,70 +272,6 @@ begin
 				Actions.PlayerWareDistribution(p, 9, 12, 5); //Stables
 			end;
 end;
-
-
-//Blocks Wares in AI Storehouses depending on its structures
-procedure AISetupWareBlock();
-var
-	p: Byte;
-	h: Integer;
-	aHouses: array of Integer;
-begin
-	for p := 0 to States.StatPlayerCount() -1 do
-		if States.PlayerIsAI(p) then
-			if not States.AIAutoBuild(p) then //Igrone if AI has AutoBuild enabled
-			begin
-				aHouses := States.PlayerGetAllHouses(p);
-				for h := 0 to Length(aHouses) -1 do
-					case States.HouseType(aHouses[h]) of
-						0: 	BlockWareInStorehouse(p, 0, true); //Sawmill: Treetrunk
-						1:	begin //Iron Smithy
-								BlockWareInStorehouse(p, 3, true); //Iron Ore
-								BlockWareInStorehouse(p, 5, true); //Coal
-							end;
-						2:  begin //Weapon Smithy
-								BlockWareInStorehouse(p, 5, true); //Coal
-								BlockWareInStorehouse(p, 6, true); //Iron
-							end;
-						3: 	; //Coal Mine
-						4:	; //Iron Mine
-						5: 	; //Coal Mine
-						6:	; //Fisherhut
-						7: 	BlockWareInStorehouse(p, 11, true); //Bakery: Flour
-						8:	; //Farm
-						9:	; //Woodcutter
-						10:	begin //Weapon Smithy
-								BlockWareInStorehouse(p, 5, true); //Coal
-								BlockWareInStorehouse(p, 6, true); //Iron
-							end;
-						11: ; //Storehouses
-						12: BlockWareInStorehouse(p, 9, true); //Stables: Corn
-						13: ; //Schools
-						14: ; //Quarry
-						15: begin //Metallurgists
-								BlockWareInStorehouse(p, 4, true); //Gold Ore
-								BlockWareInStorehouse(p, 5, true); //Coal
-							end;
-						16: BlockWareInStorehouse(p, 9, true); //Swinefarm: Corn
-						17: ; //Watchtower
-						18: ; //Townhall
-						19: ; //BlockWareInStorehouse(p, 2, true); //Weapons Workshop: Timber
-						20: begin
-								BlockWareInStorehouse(p, 12, true); //Armory Workshop
-								//BlockWareInStorehouse(p, 2, true); //Timber
-							end;
-						21: ; //Barracks
-						22: BlockWareInStorehouse(p, 9, true); //Mill: Corn
-						23: ; //Vehicles Workshop
-						24: BlockWareInStorehouse(p, 14, true); //Butcher: Pig
-						25: BlockWareInStorehouse(p, 15, true); //Tannery: Skin
-						26: ; //Unused
-						27: ; //Inn
-						28: ; //Vineyard
-						29: ; //MarketFromWare
-					end;
-			end;
-end;
 {$ENDIF}
 
 
@@ -278,8 +283,8 @@ var
 begin
 	//Apply...
 	{$IFDEF AIDEF}
-	AISetupWareDistribution();
 	AISetupWareBlock();
+	AISetupWareDistribution();
 	{$ENDIF}
 	{$IFDEF SETHUNGER}
 	UnitsRandomHungerSet();
@@ -331,6 +336,19 @@ begin
 end;
 
 
+//Block Wares in newly built Storehouses
+procedure ImproveStaticAIOnHouseBuilt(aHouse: Integer);
+var
+	HouseOwner: Byte;
+begin
+	HouseOwner := States.HouseOwner(aHouse);
+	if States.PlayerIsAI(HouseOwner) then
+		if not States.AIAutoBuild(HouseOwner) then
+			if States.HouseType(aHouse) = 11 then
+				ExecuteWareBlock(HouseOwner);
+end;
+
+
 //Remove stored buildings of defeated AIPlayer from Array to free up space
 procedure ImproveStaticAIOnPlayerDefeated(aIndex: Integer);
 var
@@ -360,17 +378,6 @@ begin
 		end;
 end;}
 
-{procedure OnHouseBuilt(aHouse: Integer);
-var
-	aHouses: array of Integer;
-	HouseOwner, h: Byte;
-begin
-	HouseOwner := States.HouseOwner(aHouse);
-	if States.PlayerIsAI(HouseOwner) then
-		if not States.AIAutoBuild(HouseOwner) then
-			if States.HouseType(aHouse) = 11 then
-				Actions.HouseWareBlock(aHouse, WareType, Block);
-end;}
 
 {$ELSE}
 procedure ImproveStaticAIOnHouseDestroyed(aHouseID, aDestroyerIndex: Integer);
@@ -379,6 +386,11 @@ begin
 end;
 
 procedure ImproveStaticAIOnTick();
+begin
+	exit;
+end;
+
+procedure ImproveStaticAIOnHouseBuilt(aHouse: Integer);
 begin
 	exit;
 end;
