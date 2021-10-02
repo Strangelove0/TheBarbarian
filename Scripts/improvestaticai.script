@@ -103,7 +103,7 @@ begin
 end;
 
 
-procedure PlanAddRebuildHouseAndConnect(Player, HouseType: Byte; X, Y: Word);
+procedure PlanAddHouseAndConnect(Player, HouseType: Byte; X, Y: Word);
 var
 	t: Byte;
 	X1, Y1: Word;
@@ -325,7 +325,7 @@ begin
 				if ((aDestroyedHouses[j].iTime +DELAY) <= States.GameTime()) then
 				begin
 					aDestroyedHouses[j].aHouse := -1;
-					PlanAddRebuildHouseAndConnect(aDestroyedHouses[j].iOwner, aDestroyedHouses[j].iType, aDestroyedHouses[j].iX, aDestroyedHouses[j].iY);
+					PlanAddHouseAndConnect(aDestroyedHouses[j].iOwner, aDestroyedHouses[j].iType, aDestroyedHouses[j].iX, aDestroyedHouses[j].iY);
 					break; //Better performance
 				end;
 end;
