@@ -94,12 +94,12 @@ var
 	Value: Integer;
 begin
 	Value := Coordinate +States.KaMRandomI(RADIUS*2 +1) -RADIUS;
-	//Limit new coordinates to buidable area (cant build on the very borders of a map)
+	//Limit new coordinates to a certain area
 	if Utils.InRangeI(Value, LowerLimit, UpperLimit) then 
 	begin
 		Result := Value;
 	end else
-		Result := Coordinate; //Use original coordinate
+		Result := Coordinate; //Use original coordinate if out of bounds
 end;
 
 
@@ -112,7 +112,7 @@ begin
 	begin
 		while t < gTries do
 		begin
-			X1 := GetNewCoordinate(X, 2, States.MapWidth() -2);
+			X1 := GetNewCoordinate(X, 2, States.MapWidth() -2); //Limit new coordinates to buidable area (cant build on the very borders of a map)
 			Y1 := GetNewCoordinate(Y, 3, States.MapHeight() -2);
 			{$IFDEF DEBUG}
 			Actions.Log('Original Coordinates: X: ' +inttostr(X) +', Y: ' +inttostr(Y) + '; New Coordinates: X1: ' +inttostr(X1) + ', Y1: ' +inttostr(Y1) + '; Try: ' +inttostr(t));
