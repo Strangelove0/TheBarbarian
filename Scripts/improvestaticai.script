@@ -1,6 +1,6 @@
 //-- Improve Static AI --//
 //By Strangelove
-//v0.4.1
+//v0.4.1b
 //02.10.2021
 //Developed for r8754
 //Last modified on r12945
@@ -115,17 +115,20 @@ begin
 			X1 := GetNewCoordinate(X, 2, States.MapWidth() -2);
 			Y1 := GetNewCoordinate(Y, 3, States.MapHeight() -2);
 			{$IFDEF DEBUG}
-			Actions.Log('X: ' +inttostr(X) +', Y: ' +inttostr(Y) + '; X1: ' +inttostr(X1) + ', Y1: ' +inttostr(Y1) + '; Tries: ' +inttostr(t));
+			Actions.Log('Original Coordinates: X: ' +inttostr(X) +', Y: ' +inttostr(Y) + '; New Coordinates: X1: ' +inttostr(X1) + ', Y1: ' +inttostr(Y1) + '; Try: ' +inttostr(t));
 			{$ENDIF}
 			if Actions.PlanAddHouse(Player, HouseType, X1, Y1) then
 			begin
+				{$IFDEF DEBUG}
+				Actions.Log('House plan could not be placed at first try: Actions.PlanAddHouse(' + inttostr(Player) + ', ' + inttostr(HouseType) + ', ' + inttostr(X) + ', ' + inttostr(Y) + ');' + ' House plan placed at: Actions.PlanAddHouse(' + inttostr(Player) + ', ' + inttostr(HouseType) + ', ' + inttostr(X1) + ', ' + inttostr(Y1) + ');' + ' GameTime: ' + inttostr(States.GameTime()) + ' Tries: ' + inttostr(t));
+				{$ENDIF}
 				ConnectToClosestHouse(Player, X1, Y1, 11); //Closest Storehouse
 				break;
 			end else
 				Inc(t);
 		end;
 		{$IFDEF DEBUG}
-		Actions.Log('House plan could not be placed at first try: Actions.PlanAddHouse(' + inttostr(Player) + ', ' + inttostr(HouseType) + ', ' + inttostr(X) + ', ' + inttostr(Y) + ');' + ' House plan placed at: Actions.PlanAddHouse(' + inttostr(Player) + ', ' + inttostr(HouseType) + ', ' + inttostr(X1) + ', ' + inttostr(Y1) + ');' + ' GameTime: ' + inttostr(States.GameTime()) + ' Tries: ' + inttostr(t+1));
+		Actions.Log('House plan could not be placed: Actions.PlanAddHouse(' + inttostr(Player) + ', ' + inttostr(HouseType) + ', ' + inttostr(X) + ', ' + inttostr(Y) + ');');
 		{$ENDIF}
 	end else
 		ConnectToClosestHouse(Player, X, Y, 11); //Check and (re)connect even when plan is placed on the same coordinates
@@ -355,6 +358,18 @@ begin
 			for h := 0 to Length(aHouses) -1 do
 				ConnectToClosestHouse(HouseOwner, States.HousePositionX(aHouse), States.HousePositionY(aHouse), -1);
 		end;
+end;}
+
+{procedure OnHouseBuilt(aHouse: Integer);
+var
+	aHouses: array of Integer;
+	HouseOwner, h: Byte;
+begin
+	HouseOwner := States.HouseOwner(aHouse);
+	if States.PlayerIsAI(HouseOwner) then
+		if not States.AIAutoBuild(HouseOwner) then
+			if States.HouseType(aHouse) = 11 then
+				Actions.HouseWareBlock(aHouse, WareType, Block);
 end;}
 
 {$ELSE}
