@@ -1,7 +1,7 @@
 //-- Improve Static AI --//
 //By Strangelove
-//v0.3.1
-//29.09.2021
+//v0.4
+//02.10.2021
 //Developed for r8754
 //Last modified on r12945
 
@@ -15,6 +15,9 @@
 {$EVENT evtPlayerDefeated:ImproveStaticAIOnPlayerDefeated}
 
 
+{$DEFINE DEBUG}
+{$UNDEF DEBUG}
+
 {$DEFINE REBUILD} //Enable Rebuilding of AI Houses
 //{$UNDEF REBUILD}
 {$DEFINE SETHUNGER} //Set Hunger Level of AI Players
@@ -25,14 +28,16 @@
 
 {$IFDEF REBUILD}
 const
-	DELAY = 300; //Cant be 0; Destroyed House needs time to be removed from game (in Ticks)
-	UPDATE_FREQ = 101; //How frequently aDestroyedHouses array will be checked (in Ticks)
+	DELAY = 300; 		//Cant be 0; Destroyed House needs time to be removed from game (in Ticks)
+	UPDATE_FREQ = 101; 	//How frequently aDestroyedHouses array will be checked (in Ticks)
+	RADIUS = 2;			//Acceptable Radius for houseplans
 
 	
 Type
 	TDestroyedHouse = record
 		aHouse, iTime: Integer;
-		iX, iY, iType, iOwner: Byte;
+		iX, iY: Word;
+		iType, iOwner: Byte;
 	end;
 
 var
@@ -40,17 +45,63 @@ var
 	
 	
 
-procedure PlanRebuildHouse(PlayerID, HouseType, X, Y: Byte);
+procedure ConnectToClosestHouse(Player: Byte; X, Y: Word; HouseType: SmallInt);
+var
+	iClosestHouse: Integer;
 begin
-	{$IFDEF DEBUG}
-	if not Actions.PlanAddHouse(PlayerID, HouseType, X, Y) then
-		Actions.Log('House plan to rebuild destroyed House could not be placed: Actions.PlanAddHouse: ' + inttostr(PlayerID) + ', ' + inttostr(HouseType) + ', ' + inttostr(X) + ', ' + inttostr(Y) + '; GameTime: ' + inttostr(States.GameTime()));
-	{$ELSE}
-	Actions.PlanAddHouse(PlayerID, HouseType, X, Y);
-	{$ENDIF}
+	//Find closest House
+	iClosestHouse := States.ClosestHouse(Player, X, Y, HouseType);
+	//New house plan not connected? Connect to closest house
+	if not States.ConnectedByRoad(X, Y +1, States.HousePositionX(iClosestHouse), States.HousePositionY(iClosestHouse) +1) then
+		Actions.PlanConnectRoad(Player, X, Y +1, States.HousePositionX(iClosestHouse), States.HousePositionY(iClosestHouse) +1, false);
 end;
 
 
+function GetNewCoordinate(Coordinate: Word; LowerLimit, UpperLimit: Word): Word;
+var
+	Value: Integer;
+begin
+	Value := Coordinate +States.KaMRandomI(RADIUS*2 +1) -RADIUS;
+	//Limit new coordinates to buidable area (cant build on the very borders of a map)
+	if Utils.InRangeI(Value, LowerLimit, UpperLimit) then 
+	begin
+		Result := Value;
+	end else
+		Result := Coordinate; //Use original coordinate
+end;
+
+
+procedure PlanAddRebuildHouseAndConnect(Player, HouseType: Byte; X, Y: Word);
+var
+	t, Tries: Byte;
+	X1, Y1: Word;
+begin
+	if not Actions.PlanAddHouse(Player, HouseType, X, Y) then
+	begin
+		Tries := Round(Utils.Power((RADIUS*2 +1), 2));
+		while t < Tries do
+		begin
+			X1 := GetNewCoordinate(X, 2, States.MapWidth() -2);
+			Y1 := GetNewCoordinate(Y, 3, States.MapHeight() -2);
+			{$IFDEF DEBUG}
+			Actions.Log('X: ' +inttostr(X) +', Y: ' +inttostr(Y) + '; X1: ' +inttostr(X1) + ', Y1: ' +inttostr(Y1) + '; Tries: ' +inttostr(t));
+			{$ENDIF}
+			if Actions.PlanAddHouse(Player, HouseType, X1, Y1) then
+			begin
+				ConnectToClosestHouse(Player, X1, Y1, -1);
+				break;
+			end else
+				Inc(t);
+		end;
+		{$IFDEF DEBUG}
+		Actions.Log('House plan could not be placed at first try: Actions.PlanAddHouse(' + inttostr(Player) + ', ' + inttostr(HouseType) + ', ' + inttostr(X) + ', ' + inttostr(Y) + ');' + ' House plan placed at: Actions.PlanAddHouse(' + inttostr(Player) + ', ' + inttostr(HouseType) + ', ' + inttostr(X1) + ', ' + inttostr(Y1) + ');' + ' GameTime: ' + inttostr(States.GameTime()) + ' Tries: ' + inttostr(t+1));
+		{$ENDIF}
+	end else
+		ConnectToClosestHouse(Player, X, Y, -1); //Check and (re)connect even when plan is placed on the same coordinates
+end;
+
+
+//Save Destroyed Houses
 procedure DestroyedHouseData(aHouseID: Integer; j: Byte);
 begin
 	aDestroyedHouses[j].iX := States.HousePositionX(aHouseID);
@@ -91,12 +142,12 @@ begin
 			for i := 0 to Length(aUnits) -1 do
 				if States.UnitsGroup(aUnits[i]) = -1 then
 				begin
-					Actions.UnitHungerSet(aUnits[i], States.UnitMaxHunger()/2 + States.KaMRandomI(States.UnitMaxHunger()/2 +1));
+					Actions.UnitHungerSet(aUnits[i], States.UnitMaxHunger()/2 + States.KaMRandomI(States.UnitMaxHunger()/2));
 				end else
 				begin
 					iGroup := States.UnitsGroup(aUnits[i]);
 					if States.GroupMember(iGroup, 0) = aUnits[i] then
-						Actions.GroupHungerSet(iGroup, States.UnitMaxHunger()/2 + States.KaMRandomI(States.UnitMaxHunger()/2 +1));
+						Actions.GroupHungerSet(iGroup, States.UnitMaxHunger()/2 + States.KaMRandomI(States.UnitMaxHunger()/2));
 				end;
 		end;
 end;
@@ -255,8 +306,8 @@ begin
 				if ((aDestroyedHouses[j].iTime +DELAY) <= States.GameTime()) then
 				begin
 					aDestroyedHouses[j].aHouse := -1;
-					PlanRebuildHouse(aDestroyedHouses[j].iOwner, aDestroyedHouses[j].iType, aDestroyedHouses[j].iX, aDestroyedHouses[j].iY);
-					//break;
+					PlanAddRebuildHouseAndConnect(aDestroyedHouses[j].iOwner, aDestroyedHouses[j].iType, aDestroyedHouses[j].iX, aDestroyedHouses[j].iY);
+					break; //Better performance
 				end;
 end;
 
