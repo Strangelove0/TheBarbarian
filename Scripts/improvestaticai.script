@@ -16,7 +16,7 @@
 
 
 {$DEFINE DEBUG}
-//{$UNDEF DEBUG}
+{$UNDEF DEBUG}
 
 {$DEFINE REBUILD} //Enable Rebuilding of AI Houses
 //{$UNDEF REBUILD}
@@ -28,7 +28,7 @@
 
 {$IFDEF REBUILD}
 const
-	DELAY = 3000; 		//Cant be 0; Destroyed House needs time to be removed from game (in Ticks)
+	DELAY = 300; 		//Cant be 0; Destroyed House needs time to be removed from game (in Ticks)
 	UPDATE_FREQ = 101; 	//How frequently aDestroyedHouses array will be checked (in Ticks)
 	RADIUS = 2;			//Acceptable Radius for newly placed houseplans (performance intensive; recommended values: 1..3);
 
@@ -47,6 +47,31 @@ var
 var
 	gTries: Byte;
 
+
+
+//Save Destroyed Houses
+procedure DestroyedHouseData(aHouseID: Integer; j: Byte);
+begin
+	aDestroyedHouses[j].iX := States.HousePositionX(aHouseID);
+	aDestroyedHouses[j].iY := States.HousePositionY(aHouseID);
+	aDestroyedHouses[j].iOwner := States.HouseOwner(aHouseID);
+	aDestroyedHouses[j].iType := States.HouseType(aHouseID);
+	aDestroyedHouses[j].iTime := States.GameTime();
+	aDestroyedHouses[j].aHouse := aHouseID;
+end;
+
+
+//Needed to scale arrays accordingly
+function ImproveStaticAIPlayerCount(): Byte;
+var
+	p, AIPlayer: Byte;
+begin
+	for p := 0 to States.LocationCount() -1 do
+		if States.PlayerEnabled(p) then
+			if States.PlayerIsAI(p) then
+				Inc(AIPlayer);
+	Result := AIPlayer;
+end;
 
 
 procedure ConnectToClosestHouse(Player: Byte; X, Y: Word; HouseType: SmallInt);
@@ -105,31 +130,6 @@ begin
 	end else
 		ConnectToClosestHouse(Player, X, Y, 11); //Check and (re)connect even when plan is placed on the same coordinates
 end;
-
-
-//Save Destroyed Houses
-procedure DestroyedHouseData(aHouseID: Integer; j: Byte);
-begin
-	aDestroyedHouses[j].iX := States.HousePositionX(aHouseID);
-	aDestroyedHouses[j].iY := States.HousePositionY(aHouseID);
-	aDestroyedHouses[j].iOwner := States.HouseOwner(aHouseID);
-	aDestroyedHouses[j].iType := States.HouseType(aHouseID);
-	aDestroyedHouses[j].iTime := States.GameTime();
-	aDestroyedHouses[j].aHouse := aHouseID;
-end;
-
-
-//Needed to scale arrays accordingly
-function ImproveStaticAIPlayerCount(): Byte;
-var
-	p, AIPlayer: Byte;
-begin
-	for p := 0 to States.LocationCount() -1 do
-		if States.PlayerEnabled(p) then
-			if States.PlayerIsAI(p) then
-				Inc(AIPlayer);
-	Result := AIPlayer;
-end;
 {$ENDIF}
 
 
@@ -164,12 +164,12 @@ end;
 procedure BlockWareInStorehouse(Player, WareType: Byte; Block: Boolean); //Block specific Ware in all Storehouses target Player controls
 var
 	h: Integer;
-	aHouses1: array of Integer;
+	aHouses: array of Integer;
 begin
-	aHouses1 := States.PlayerGetAllHouses(Player);
-	for h := 0 to Length(aHouses1) -1 do
-		if States.HouseType(aHouses1[h]) = 11 then
-			Actions.HouseWareBlock(aHouses1[h], WareType, Block);
+	aHouses := States.PlayerGetAllHouses(Player);
+	for h := 0 to Length(aHouses) -1 do
+		if States.HouseType(aHouses[h]) = 11 then
+			Actions.HouseWareBlock(aHouses[h], WareType, Block);
 end;
 
 
