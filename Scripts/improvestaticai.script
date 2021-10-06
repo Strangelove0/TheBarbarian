@@ -1,7 +1,7 @@
 //-- Improve Static AI --//
 //By Strangelove
-//v0.4.2
-//02.10.2021
+//v0.4.2b
+//06.10.2021
 //Developed for r8754
 //Last modified on r12945
 
@@ -151,12 +151,12 @@ begin
 			for i := 0 to Length(aUnits) -1 do
 				if States.UnitsGroup(aUnits[i]) = -1 then
 				begin
-					Actions.UnitHungerSet(aUnits[i], States.UnitMaxHunger()/2 + States.KaMRandomI(States.UnitMaxHunger()/2));
+					Actions.UnitHungerSet(aUnits[i], States.UnitMaxHunger()/2 + States.KaMRandomI(States.UnitMaxHunger()/2 +1));
 				end else
 				begin
 					iGroup := States.UnitsGroup(aUnits[i]);
 					if States.GroupMember(iGroup, 0) = aUnits[i] then
-						Actions.GroupHungerSet(iGroup, States.UnitMaxHunger()/2 + States.KaMRandomI(States.UnitMaxHunger()/2));
+						Actions.GroupHungerSet(iGroup, States.UnitMaxHunger()/2 + States.KaMRandomI(States.UnitMaxHunger()/2 +1));
 				end;
 		end;
 end;
@@ -301,6 +301,29 @@ begin
 end;
 
 
+{$IFDEF AIDEF}
+//Block Wares in newly built Storehouses
+procedure ImproveStaticAIOnHouseBuilt(aHouse: Integer);
+var
+	HouseOwner: Byte;
+begin
+	if States.HouseType(aHouse) = 11 then
+		HouseOwner := States.HouseOwner(aHouse);
+		if States.PlayerIsAI(HouseOwner) then
+			if not States.AIAutoBuild(HouseOwner) then	
+				ExecuteWareBlock(HouseOwner);
+end;
+
+
+{$ELSE}
+procedure ImproveStaticAIOnHouseBuilt(aHouse: Integer);
+begin
+	exit;
+end;
+{$ENDIF}
+
+
+
 {$IFDEF REBUILD}
 procedure ImproveStaticAIOnHouseDestroyed(aHouseID, aDestroyerIndex: Integer);
 var
@@ -336,19 +359,6 @@ begin
 end;
 
 
-//Block Wares in newly built Storehouses
-procedure ImproveStaticAIOnHouseBuilt(aHouse: Integer);
-var
-	HouseOwner: Byte;
-begin
-	HouseOwner := States.HouseOwner(aHouse);
-	if States.PlayerIsAI(HouseOwner) then
-		if not States.AIAutoBuild(HouseOwner) then
-			if States.HouseType(aHouse) = 11 then
-				ExecuteWareBlock(HouseOwner);
-end;
-
-
 //Remove stored buildings of defeated AIPlayer from Array to free up space
 procedure ImproveStaticAIOnPlayerDefeated(aIndex: Integer);
 var
@@ -359,24 +369,6 @@ begin
 			if aDestroyedHouses[j].iOwner = aIndex then
 				aDestroyedHouses[j].aHouse := -1;
 end;
-
-
-{//Check if Houses are still connected to each other
-procedure OnHouseBuilt(aHouse: Integer);
-var
-	aHouses: array of Integer;
-	HouseOwner, h: Byte;
-begin
-	HouseOwner := States.HouseOwner(aHouse);
-	if States.PlayerIsAI(HouseOwner) then
-		if not States.AIAutoBuild(HouseOwner) then
-		begin
-			//Connect every house to the closest house
-			aHouses := States.PlayerGetAllHouses(HouseOwner);
-			for h := 0 to Length(aHouses) -1 do
-				ConnectToClosestHouse(HouseOwner, States.HousePositionX(aHouse), States.HousePositionY(aHouse), -1);
-		end;
-end;}
 
 
 {$ELSE}
