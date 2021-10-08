@@ -79,6 +79,9 @@ Version 0.7.3: (24.06.2021)
   - Added 'Easier' and 'Very Easy' Difficulty options
   - Difficulty modifiers changed for 'Easy', 'Easier' and 'Very Easy'; First attack comes later, after that attacks are alittle more frequent (You have to thank @greeny for that ;))
 
+Version 0.7.4: (08.10.2021)
+- Updated all scripts to the newest version
+
 
 TODO:
 - Add more translations

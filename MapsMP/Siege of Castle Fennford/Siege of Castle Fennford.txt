@@ -2,7 +2,7 @@ Author
 Strangelove
 
 Version
-0.8.3b (20.08.2021)
+0.8.4 (08.10.2021)
 
 SmallDescLIBX
 10

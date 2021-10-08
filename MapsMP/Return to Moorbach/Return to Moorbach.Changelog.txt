@@ -111,3 +111,6 @@ Version 0.8.4e (24.06.2021)
   - Updated 'difficulty.script' to the newest version (v0.8.5c)
   - Added 'Very Easy' Difficulty options
   - Difficulty modifiers changed for 'Easier' and 'Very Easy'; First attack comes later, after that attacks are alittle more frequent
+
+Version 0.8.5 (08.10.2021)
+- Updated scripts to new version

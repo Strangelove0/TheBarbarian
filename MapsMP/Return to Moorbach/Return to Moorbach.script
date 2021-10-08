@@ -1,9 +1,9 @@
 //-- Return to Moorbach --//
 //By Strangelove
-//v0.8.4
-//28.08.2020
+//v0.8.5
+//08.10.2021
 //Developed for r10540
-//Last Tested in r10745
+//Last Tested on 12945
 
 {$I dynamicmap.script}
 {$I improvestaticai.script}
@@ -69,6 +69,12 @@ var
 begin
 	DifficultySetting := States.MissionDifficulty();
 
+	//[Very Easy, Easier, Easy, Normal, Hard, Harder, Very Hard]
+	EquipRateMod := [2, 1.5, 1.25, 1, 0.75, 0.5, 0.3];
+	RecruitDelayMod := [2, 1.5, 1.25, 1, 1, 1, 1];
+	RecruitLimitMod := [1, 1, 1, 1, 1.33, 1.66, 2];
+	WorkerLimitMod := [1, 1, 1, 1, 1.33, 1.66, 2];
+	
 	case DifficultySetting of
 		mdHard1, mdHard2:
 		begin

@@ -107,3 +107,6 @@ Version 0.8.3b: (20.08.2021)
   - When played with less than 3 Players, all houses and trades are enabled for all players
   - Disabled all Townhall units other than Warriors for Loc3 in MapEd
   - Enabled all Townhall units for Loc2 in MapEd
+
+Version 0.8.4: (08.10.2021)
+- Updated scripts to the newest version
