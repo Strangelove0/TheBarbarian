@@ -1,0 +1,106 @@
+//-- AIArmsBoost --//
+//By Strangelove
+//v0.1
+//08.10.2021
+//Developed for KaM Remake r12945
+//Last Tested on KaM Remake r12945
+//Include "difficuly.script" for this script to work!
+
+//This script might be necessary on maps where AI relys on Weapon production to make units, aka does not have 9999 of everything in Barracks
+
+
+{$EVENT evtMissionStart:AIArmsBoostOnMissionStart}
+{$EVENT evtTick:AIArmsBoostOnTick}
+{$EVENT evtWareProduced:AIArmsBoostOnWareProduced}
+
+
+var
+	aSavedWeaponHouses: array of Integer;
+	WeaponProductionCount: Word;
+	AIArmsBoost: Boolean;
+	
+	
+	
+function IsWeaponProduction(aHouseID: Integer): Boolean;
+begin
+	case States.HouseType(aHouseID) of
+		2,10,12,19,20: Result := true;
+		else
+			Result := false;
+	end;
+end;
+
+
+procedure SaveWeaponProduction(p: Byte);
+var
+	aHouses: array of Integer;
+	h: Integer;
+begin
+	aHouses := States.PlayerGetAllHouses(p);
+	for h := 0 to Length(aHouses) -1 do
+		if IsWeaponProduction(aHouses[h]) then
+		begin
+			aSavedWeaponHouses[WeaponProductionCount] := aHouses[h];
+			Inc(WeaponProductionCount);
+		end;
+end;
+
+
+
+//-- Default Procedures --//
+
+procedure AIArmsBoostOnMissionStart();
+var
+	Difficulty: TKMMissionDifficulty;
+	p: Byte;
+begin
+	//Predefine Varibales and Arrays
+	SetLength(aSavedWeaponHouses, (States.MapWidth() *States.MapHeight()) /9);
+	WeaponProductionCount := 0;
+	AIArmsBoost := false;
+end;
+
+
+procedure AIArmsBoostOnTick();
+var
+	p: Byte;
+begin
+	if States.GameTime() = (MAX_HANDS +1) then
+	begin
+		for p := 0 to States.StatPlayerCount() -1 do
+			if States.PlayerIsAI(p) then
+				if not States.PlayerAllianceCheck(GetHumanPlayer(), p) then
+					if EquipRateMod[dMod] < 1 then //Only if necessary
+					begin
+						SaveWeaponProduction(p);
+						AIArmsBoost := true;
+					end else
+						AIArmsBoost := false;
+	end;
+	if States.GameTime() = (MAX_HANDS +2) then
+	begin
+		//Trim down array
+		SetLength(aSavedWeaponHouses, WeaponProductionCount);
+		{$IFDEF TESTMODE}
+		Actions.OverlayTextAppend(-1, '||aSavedWeaponHouses: ' +inttostr(Length(aSavedWeaponHouses)));
+		Actions.OverlayTextAppend(-1, '|WeaponProductionCount: ' +inttostr(WeaponProductionCount));
+		{$ENDIF}
+	end;
+end;
+
+
+procedure AIArmsBoostOnWareProduced(aHouse: Integer; aType: Byte; aCount: Word);
+var
+	HouseIndexer: Integer;
+	dHouseOwner: Byte;
+begin
+	if AIArmsBoost then
+		if IsWeaponProduction(aHouse) then
+		begin
+			dHouseOwner := States.HouseOwner(aHouse);
+			if States.PlayerIsAI(dHouseOwner) then
+				for HouseIndexer := 0 to Length(aSavedWeaponHouses) -1 do
+					if aSavedWeaponHouses[HouseIndexer] = aHouse then
+						Actions.GiveWeapons(dHouseOwner, aType, Round((2 -EquipRateMod[dMod]) *States.KaMRandom())); //Add Weapons to 1. Barracks
+		end;
+end;
