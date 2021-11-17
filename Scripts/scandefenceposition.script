@@ -1,0 +1,48 @@
+procedure ScanDefencePosition();
+var
+  p, j: Byte;
+  defPosCount: Integer;
+  defXPos, defYPos: Integer;
+  defGroupType: Byte;        // Group types: 0 = Melee; 1 = Anti-horse; 2 = Ranged; 3 = Mounted
+  defRadius: Word;
+  defType: Byte;             // Defence type: 0 = Defenders; 1 = Attackers
+  UnitType, defDirection: Byte;
+begin
+	for p := 0 to States.StatPlayerCount -1 do
+		if States.PlayerIsAI(p) then
+		begin
+			defPosCount := States.StatAIDefencePositionsCount(p);
+
+			if defPosCount < 1 then
+			continue;
+			
+			Actions.Log('//Defence Positions of Player' +inttostr(p));
+			
+			for j := 0 to defPosCount -1 do
+			begin
+				States.AIDefencePositionGet(p, j, defXPos, defYPos, defGroupType, defRadius, defType);
+				
+				//Get Unit Direction (AIDefencePosition procedure is bugged)
+				defDirection := States.UnitDirection(States.GroupMember(States.GroupAt(defXPos, defYPos), 0));
+				
+				//Iron only Units atm
+				case defGroupType of
+					0: UnitType := 16; //Sword
+					1: UnitType := 20; //Pike
+					2: UnitType := 18; //Xbow
+					3: UnitType := 22; //Knight
+				end;
+				
+				if defType = 0 then
+				begin
+					//Use costom procedure for none attacking groups
+					Actions.Log('AddDefencePositionAndGroup(' +inttostr(p) + ', ' +inttostr(UnitType) + ', ' +inttostr(defXPos) + ', ' +inttostr(defYPos) + ', ' +inttostr(defDirection)+ ', ' +inttostr(defRadius) +'); ' + '//DefencePosition #' +inttostr(j)); 
+				end else
+					Actions.Log('Actions.AIDefencePositionAdd(' +inttostr(p) + ', '+inttostr(defXPos) + ', ' +inttostr(defYPos) + ', '  +inttostr(defDirection) + ', ' +inttostr(defGroupType) + ', ' +inttostr(defRadius) + ', 1); '+ '//DefencePosition #' +inttostr(j));
+			end;
+			
+			//Count Units
+			Actions.Log('//Amount of Army Units assigned to DefencePositions: ' +inttostr(States.StatArmyCount(p)));
+			Actions.Log(' ');
+		end;
+end;

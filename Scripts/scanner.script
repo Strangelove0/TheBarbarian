@@ -1,0 +1,213 @@
+var
+	aHouseData: array of array[0..31] of Integer;
+	aUnitData: array of array[0..3] of Integer;
+	aGroupData: array of array[0..5] of Integer;
+	aRoadworksData: array of array[0..3] of Byte;
+	aTileObjectData: array of array[0..2] of Word; //Only Corn and Grapes
+
+
+function IsGrapes(MapTileObject: Word): Boolean;
+begin
+	case MapTileObject of
+		54..57: Result := true;
+		else 
+			Result := false;
+	end;
+end;
+
+
+function IsCorn(MapTileObject: Word): Boolean;
+begin
+	case MapTileObject of
+		58, 59: Result := true;
+		else 
+			Result := false;
+	end;
+end;
+
+
+procedure ScanPlayer(PLAYER: Byte);
+var
+	iHouseID, UnitPosX, UnitPosY, iGroupLeader: Integer;
+	aHouse, aUnit, aGroup: array of Integer;
+	X, Y: Word;
+	H, M, U, G, R, O: Integer;
+	iTileObject: Word;
+begin
+	aHouse := States.PlayerGetAllHouses(PLAYER);
+	SetLength(aHouseData, Length(aHouse)); //Set length of aHouseData-array
+	for H := 0 to Length(aHouse) -1 do
+	begin
+		aHouseData[H][0] := States.HouseType(aHouse[H]); 
+		aHouseData[H][1] := States.HousePositionX(aHouse[H]);
+		aHouseData[H][2] := States.HousePositionY(aHouse[H]);
+		aHouseData[H][3] := States.HouseDamage(aHouse[H]);
+		for M := 4 to 31 do //Get resources in all Houses as well...
+			aHouseData[H][M] := States.HouseResourceAmount(aHouse[H], M-4);
+	end;
+	
+	aUnit := States.PlayerGetAllUnits(PLAYER);
+	SetLength(aUnitData, Length(aUnit));
+	for U := 0 to Length(aUnit) -1 do
+		if States.UnitsGroup(aUnit[U]) = -1 then //Ignore units that belong to a group
+		begin
+			aUnitData[U][0] := States.UnitType(aUnit[U]);
+			UnitPosX := States.UnitPositionX(aUnit[U]);
+			UnitPosY := States.UnitPositionY(aUnit[U]);
+			iHouseID := States.HouseAt(UnitPosX, UnitPosY);
+			if iHouseID = -1 then //Check if Unit is in a House
+			begin
+				aUnitData[U][1] := UnitPosX;
+				aUnitData[U][2] := UnitPosY;
+			end else //Yes -> Move X and Y Position to infront of that House
+			begin
+				aUnitData[U][1] := States.HousePositionX(iHouseID);
+				aUnitData[U][2] := States.HousePositionY(iHouseID) +1;
+			end;
+			aUnitData[U][3] := States.UnitDirection(aUnit[U]);
+		end else 
+			aUnitData[U][0] := -1;
+	
+	aGroup := States.PlayerGetAllGroups(PLAYER);
+	SetLength(aGroupData, Length(aGroup));
+	for G := 0 to Length(aGroup) -1 do
+	begin
+		iGroupLeader := States.GroupMember(aGroup[G], 0);
+		aGroupData[G][0] := States.UnitType(iGroupLeader); //Get only Type of Group Leader
+		aGroupData[G][1] := States.UnitPositionX(iGroupLeader);
+		aGroupData[G][2] := States.UnitPositionY(iGroupLeader);
+		aGroupData[G][3] := States.UnitDirection(iGroupLeader);
+		aGroupData[G][4] := States.GroupMemberCount(aGroup[G]);
+		aGroupData[G][5] := States.GroupColumnCount(aGroup[G]);
+	end;
+	
+	SetLength(aRoadworksData, States.MapHeight()*States.MapWidth()); //Initialize arrays with maximum possible size
+	SetLength(aTileObjectData, States.MapHeight()*States.MapWidth());
+	//Abysmal performance... but does its job
+	//Check what is on Coordinates X, Y and save it if important
+	for X := 1 to States.MapWidth() -1 do
+		for Y := 1 to States.MapHeight() -1 do
+			//Player-specific information: Roads, Fields, Winefields
+				if States.IsRoadAt(PLAYER, X, Y) then
+				begin
+					if not States.HouseAt(X, Y) then
+						aRoadworksData[R][0] := PLAYER;
+						aRoadworksData[R][1] := X;
+						aRoadworksData[R][2] := Y;
+						aRoadworksData[R][3] := 0;
+						Inc(R);
+				end else
+				if States.IsFieldAt(PLAYER, X, Y) then
+				begin
+					aRoadworksData[R][0] := PLAYER;
+					aRoadworksData[R][1] := X;
+					aRoadworksData[R][2] := Y;
+					aRoadworksData[R][3] := 1;
+					Inc(R);
+					//Player Unspecific: Corn and Grapes
+					iTileObject := States.MapTileObject(X, Y);
+					if IsCorn(States.MapTileObject(X, Y)) then
+					begin
+						aTileObjectData[O][0] := X;
+						aTileObjectData[O][1] := Y;
+						aTileObjectData[O][2] := iTileObject;
+						Inc(O);
+					end;
+				end else
+				if States.IsWinefieldAt(PLAYER, X, Y) then
+				begin
+					aRoadworksData[R][0] := PLAYER;
+					aRoadworksData[R][1] := X;
+					aRoadworksData[R][2] := Y;
+					aRoadworksData[R][3] := 2;
+					Inc(R);
+					//Player Unspecific: Corn and Grapes
+					iTileObject := States.MapTileObject(X, Y);
+					if IsGrapes(States.MapTileObject(X, Y)) then
+					begin
+						aTileObjectData[O][0] := X;
+						aTileObjectData[O][1] := Y;
+						aTileObjectData[O][2] := iTileObject;
+						Inc(O);
+					end;
+				end;
+				
+	//reduce arrays size to minimum possible without deleting data
+	SetLength(aRoadworksData, R);
+	SetLength(aTileObjectData, O);
+	
+	//Debugging
+	Actions.Log('//GroupLength: ' + inttostr(Length(aGroupData)));
+	Actions.Log('//HouseLength: ' + inttostr(Length(aHouseData)));	
+	Actions.Log('//UnitLength: ' + inttostr(Length(aUnitData)));
+	Actions.Log('//RoadworksLength: ' + inttostr(Length(aRoadworksData)));
+	
+	//LOG DATA
+	Actions.Log('{$EVENT evtMissionStart:AddOnMissionStart}');
+	Actions.Log('procedure AddOnMissionStart();');
+	Actions.Log('var iNewHouseID: Integer;');
+	Actions.Log('begin');
+	
+	//Add Corn- and Grape-Objects
+	Actions.Log('//Corn- and Grape-Objects');
+	for O := 0 to Length(aTileObjectData) -1 do
+		Actions.Log('Actions.MapTileObjectSet(' +inttostr(aTileObjectData[O][0]) +', ' +inttostr(aTileObjectData[O][1]) +', ' +inttostr(aTileObjectData[O][2]) +');'); 
+	//Add Roads/Fields/Winefields
+	Actions.Log('//Roads/Fields/Winefields');
+	for R := 0 to Length(aRoadworksData) -1 do
+	begin
+		if aRoadworksData[R][3] = 0 then
+			Actions.Log('Actions.GiveRoad(' +inttostr(PLAYER) +', ' +inttostr(aRoadworksData[R][1]) +', ' +inttostr(aRoadworksData[R][2]) +');');
+		if aRoadworksData[R][3] = 1 then
+			Actions.Log('Actions.GiveField(' +inttostr(PLAYER) +', ' +inttostr(aRoadworksData[R][1]) +', ' +inttostr(aRoadworksData[R][2]) +');');
+		if aRoadworksData[R][3] = 2 then
+			Actions.Log('Actions.GiveWineField(' +inttostr(PLAYER) +', ' +inttostr(aRoadworksData[R][1]) +', ' +inttostr(aRoadworksData[R][2]) +');');
+	end;
+	//Buildings/Units/Groups
+	Actions.Log('//Houses');
+	for H := 0 to Length(aHouseData)-1 do
+	begin
+		Actions.Log('iNewHouseID := Actions.GiveHouse(' +inttostr(PLAYER) +', ' +inttostr(aHouseData[H][0]) +', ' +inttostr(aHouseData[H][1]) +', ' +inttostr(aHouseData[H][2]) +');');
+		for M := 4 to 31 do
+			if aHouseData[H][M] <> 0 then //Dont try to add stuff that werent there before
+				Actions.Log('Actions.HouseAddWaresTo(iNewHouseID, ' +inttostr(M-4) +', ' +inttostr(aHouseData[H][M]) +');');
+	end;
+	Actions.Log('//Units');
+	for U := 0 to Length(aUnitData) -1 do
+		if aUnitData[U][0] <> -1 then //Used to belong to a group -> dont add
+			Actions.Log('Actions.GiveUnit(' +inttostr(PLAYER) +', ' +inttostr(aUnitData[U][0]) +', ' +inttostr(aUnitData[U][1]) +', ' +inttostr(aUnitData[U][2]) +', ' +inttostr(aUnitData[U][3]) +');');
+	Actions.Log('//Groups');
+	for G := 0 to Length(aGroupData) -1 do
+		Actions.Log('Actions.GiveGroup(' +inttostr(PLAYER) +', ' +inttostr(aGroupData[G][0]) +', ' +inttostr(aGroupData[G][1]) +', ' +inttostr(aGroupData[G][2]) +', ' +inttostr(aGroupData[G][3]) +', ' +inttostr(aGroupData[G][4]) +', ' +inttostr(aGroupData[G][5]) +');');
+	Actions.Log('end;');	
+end;
+
+
+//-- Legend  --//
+
+//aHouseData:
+//0: Type
+//1: X
+//2: Y
+//3: Damage
+//4-31: Resources (0-27)
+
+//aUnitData:
+//0: Type
+//1: X
+//2: Y
+//3: Direction
+
+//aGroupData:
+//0: Type
+//1: X
+//2: Y
+//3: Direction
+//4: Unit Count
+//5: Unit/Row
+
+//aRoadworksData
+//0: Owner
+//1: X
+//2: Y
+//3: Type
